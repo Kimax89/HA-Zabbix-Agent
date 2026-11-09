@@ -1,29 +1,29 @@
-# Zabbix Agent og Zabbix Agent 2 til Home Assistant
+# Zabbix Agent and Zabbix Agent 2 for Home Assistant
 
 Repository: https://github.com/Kimax89/HA-Zabbix-Agent
 
-To selvstændige Home Assistant-apps, appversion **0.0.2.0**:
+Two separate Home Assistant apps, app version **0.0.2.1**:
 
-| App | Officielt base-image | Standardport for passive checks | Docker-plugin |
+| App | Official base image | Default passive check port | Docker plugin |
 | --- | --- | --- | --- |
-| Zabbix Agent | `zabbix/zabbix-agent:alpine-latest` | 10052 | Nej |
-| Zabbix Agent 2 | `zabbix/zabbix-agent2:alpine-latest` | 10050 | Ja |
+| Zabbix Agent | `zabbix/zabbix-agent:alpine-latest` | 10052 | No |
+| Zabbix Agent 2 | `zabbix/zabbix-agent2:alpine-latest` | 10050 | Yes |
 
-Begge følger den nyeste stabile Alpine-variant, ikke `alpine-trunk`. Den konkrete Zabbix-version afhænger af det image, Zabbix har publiceret ved build. Docker Hubs beskrivelser var ikke indbyrdes opdaterede ved kontrollen 10. november 2026; derfor erklærer vi ikke et bestemt patchnummer for begge images. Se agentens opstartslog eller `agent.version` for den faktisk installerede version.
+Both use the latest stable Alpine variant rather than `alpine-trunk`. The actual Zabbix version depends on the image published by Zabbix at build time. Docker Hub descriptions were not mutually consistent when checked on November 10, 2026, so this project does not claim a specific patch version for both images. Check the agent startup log or `agent.version` for the installed version.
 
-## Installation fra GitHub
+## Install from GitHub
 
-1. Upload `repository.yaml`, begge appmapper og de øvrige projektfiler til roden af det offentlige repository. Upload de udpakkede filer, ikke ZIP-filen. `.github` indeholder automatiske buildtests og skal også med.
-2. I Home Assistant: **Indstillinger → Apps → Appbutik → ⋮ → Repositorier**. Ældre brugerflader bruger navnet Tilføjelser.
-3. Tilføj `https://github.com/Kimax89/HA-Zabbix-Agent` og installer den ønskede app. Home Assistant bygger den lokalt og skal kunne hente Docker-images og Alpine-pakker.
-4. Slå **Beskyttelsestilstand / Protection mode** fra for adgang til værtens processer. Agent 2 kræver det også for Docker-socket.
-5. Angiv konfigurationen og start appen. Kontrollér loggen.
+1. Upload `repository.yaml`, both app folders, and the remaining project files to the root of the public repository. Upload the extracted files, not the ZIP archive. Include `.github`, which contains automated build tests.
+2. In Home Assistant, open **Settings → Apps → App store → ⋮ → Repositories**. Older interfaces use the term Add-ons.
+3. Add `https://github.com/Kimax89/HA-Zabbix-Agent` and install the app you want. Home Assistant builds it locally and needs access to Docker images and Alpine packages.
+4. Turn off **Protection mode** to access host processes. Agent 2 also requires this for the Docker socket.
+5. Configure and start the app. Check its log.
 
-Kræver Supervisor og appbutik, normalt Home Assistant OS. Home Assistant Container alene understøtter ikke installation af apps. Til lokal installation kan mapperne i stedet kopieres til `/addons/zabbix_agent` og `/addons/zabbix_agent2`.
+Supervisor and the app store are required, normally through Home Assistant OS. Home Assistant Container alone does not support app installation. For local installation, copy the folders to `/addons/zabbix_agent` and `/addons/zabbix_agent2` instead.
 
-## Konfiguration
+## Configuration
 
-Eksempel for Agent 2:
+Example for Agent 2:
 
 ```yaml
 hostname: homeassistant
@@ -34,35 +34,35 @@ tls_psk_identity: ""
 tls_psk: ""
 ```
 
-Erstat serveradressen. For den klassiske Agent bruges som udgangspunkt `hostname: homeassistant-agent` og `listen_port: 10052`. Hvis begge apps kører samtidig, skal deres Zabbix-hostnavne og passive lytteporte være forskellige.
+Replace the server address. The classic Agent defaults to `hostname: homeassistant-agent` and `listen_port: 10052`. If both apps run at the same time, use different Zabbix hostnames and passive listening ports.
 
-- `hostname`: præcis samme hostnavn som i Zabbix, inklusive store/små bogstaver.
-- `server_active`: server/proxy med valgfri port, normalt 10051. Tom betyder ingen aktive checks.
-- `server_passive`: tilladte server-/proxyadresser eller netværk, kommasepareret og uden port. Tom deaktiverer passive checks.
-- `listen_port`: værtens TCP-port til passive checks. Den skal være ledig og anvendes i Zabbix-hostens agent-interface. Ignoreres, når passive checks er deaktiveret.
-- `tls_psk_identity` og `tls_psk`: udfyld begge for kryptering. Nøglen skal være 32-512 hexadecimale tegn og have lige længde. Indstil samme nøgle, identitet og PSK-forbindelsestyper i Zabbix. Med PSK tillades kun PSK. Nøglen indgår i appens konfiguration/backups. Uden PSK er forbindelsen ukrypteret; brug et betroet netværk eller VPN.
+- `hostname`: must exactly match the hostname in Zabbix, including letter case.
+- `server_active`: server/proxy address with an optional port, normally 10051. Leave empty to disable active checks.
+- `server_passive`: allowed server/proxy addresses or networks, separated by commas and without ports. Leave empty to disable passive checks.
+- `listen_port`: the host TCP port for passive checks. It must be available and match the agent interface configured on the Zabbix host. Ignored when passive checks are disabled.
+- `tls_psk_identity` and `tls_psk`: fill in both to enable encryption. The key must contain 32-512 hexadecimal characters and have an even length. Configure the same key, identity, and PSK connection types in Zabbix. When PSK is enabled, only PSK connections are allowed. The key is included in app configuration and backups. Without PSK, traffic is unencrypted; use a trusted network or VPN.
 
-Mindst ét serverfelt skal være udfyldt. Tilknyt en Linux-template med den valgte checktype. Agent 2 kan desuden bruge Zabbix' Docker-template; passive Docker-items kræver passive checks. Tilpas templates til din servers og agents versioner.
+At least one server field must be filled in. Link a Linux template using the selected check type. Agent 2 can also use the Zabbix Docker template; passive Docker items require passive checks. Match templates to your server and agent versions.
 
-## Adgang og målingernes afgrænsning
+## Access and measurement limitations
 
-Begge apps deler PID-, netværks- og hostname-namespace med værten og kører som root. De kan se værtens processer og netværk. CPU-/hukommelsesmålinger skal sammenholdes med værten, da cgroups kan påvirke visse værdier.
+Both apps share the host PID, network, and hostname namespaces and run as root. They can see host processes and network interfaces. Compare CPU and memory measurements against the host because cgroups may affect some values.
 
-Kun Agent 2 får Docker-socket og den indbyggede Docker-plugin til container-discovery/status/statistik. Docker-socket giver omfattende adgang til værten, også når socket er monteret read-only. Den klassiske Agent har ikke Agent 2's Docker-plugin.
+Only Agent 2 receives access to the Docker socket and its built-in Docker plugin for container discovery, status, and statistics. The Docker socket provides extensive access to the host, even when mounted read-only. The classic Agent does not include Agent 2's Docker plugin.
 
-Værtens rod-filsystem og SMART-enheder er ikke generelt monteret. Filsystem-, OS- og pakkedata kan beskrive appens container. Gennemgå Linux-templatens discovery og ikke-understøttede items. Fjernkommandoer og egne UserParameters er ikke aktiveret. Apps har ingen webside og bruger ikke Home Assistant API-token.
+The host root filesystem and SMART devices are not generally mounted. Filesystem, OS, and package information may describe the app container. Review Linux template discovery and unsupported items. Remote commands and custom UserParameters are not enabled. Neither app has a web interface or uses a Home Assistant API token.
 
-## Opdateringer og test
+## Updates and testing
 
-`alpine-latest` hentes ved et nyt build. Genstart opdaterer ikke agenten. Vælg **Genopbyg / Rebuild**, når ny upstream-version skal hentes; kontrollér derefter den faktiske version i loggen. Ved builds uden for Home Assistant bruges `docker build --pull --no-cache`. Nye appversioner i repositoryet giver Home Assistant en opdateringsindikator; ændringer i upstream-imaget alene gør ikke.
+`alpine-latest` is fetched during a new build. Restarting does not update the agent. Select **Rebuild** to fetch a newer upstream image, then verify the installed version in the log. For builds outside Home Assistant, use `docker build --pull --no-cache`. New app versions in the repository produce an update notification in Home Assistant; upstream image changes alone do not.
 
-GitHub Actions bygger begge apps på amd64 og arm64 og kører `tests/smoke.sh`. Testen kontrollerer opstart i aktiv/passiv tilstand, PSK-konfiguration og afvisning af fejl. Den erstatter ikke Home Assistant-integrationstest. Se `VALIDATION.md` for hvad der faktisk er kørt. Begge apps er eksperimentelle.
+The GitHub Actions workflow is configured to build both apps on amd64 and arm64 and run `tests/smoke.sh`. The test checks active/passive startup, PSK configuration, and rejection of invalid configuration. It does not replace Home Assistant integration testing. See `VALIDATION.md` for checks actually performed. Both apps are experimental.
 
-## Kilder
+## Sources
 
 - https://github.com/zabbix/zabbix-docker
 - https://hub.docker.com/r/zabbix/zabbix-agent/
 - https://hub.docker.com/r/zabbix/zabbix-agent2/
 - https://developers.home-assistant.io/docs/apps/configuration/
 
-Zabbix 7.0 og nyere er AGPL-3.0. Bevar upstreams licensoplysninger ved distribution. Filerne er klargjort lokalt, ikke uploadet til GitHub herfra.
+Zabbix 7.0 and later use AGPL-3.0. Preserve upstream license notices when distributing. These files have been prepared locally and have not been uploaded to GitHub from this environment.

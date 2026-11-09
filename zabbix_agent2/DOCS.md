@@ -1,9 +1,9 @@
-# Opsætning
+# Setup
 
-Se [installationsvejledning og konfiguration](https://github.com/Kimax89/HA-Zabbix-Agent#readme).
+See the [installation and configuration guide](https://github.com/Kimax89/HA-Zabbix-Agent#readme).
 
-Udfyld hostname og mindst ét serverfelt. Passive checks bruger listen_port. Slå beskyttelsestilstand fra for værtens processer. Kun Agent 2 får Docker-adgang. Filsystemmålinger kan beskrive containeren.
+Set hostname and at least one server field. Passive checks use listen_port. Turn off Protection mode to access host processes. Only Agent 2 receives Docker access. Filesystem measurements may describe the container.
 
-Begge PSK-felter kræves til kryptering. Uden PSK er trafikken ukrypteret. Standardporten er 10052 for Agent og 10050 for Agent 2. Brug forskellige hostnavne og porte, hvis begge køres samtidig.
+Both PSK fields are required for encryption. Without PSK, traffic is unencrypted. The default port is 10052 for Agent and 10050 for Agent 2. Use different hostnames and ports when running both apps together.
 
-Appen anvender upstreams stabile alpine-latest. Genopbyg for at hente et nyere image; genstart er ikke nok.
+The app uses upstream's stable alpine-latest image. Rebuild to fetch a newer image; restarting is not enough.

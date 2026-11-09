@@ -1,36 +1,37 @@
-# Validering – 10. november 2026
+# Validation - November 10, 2026
 
-## Gennemført lokalt
+## Completed locally
 
-- JSON-parsing, unikke slugs, versionformat, option/schema-overensstemmelse og forskellige standardporte kontrolleret for begge apps.
-- Dockerfiles kontrolleret for de korrekte officielle alpine-latest images.
-- Manuel gennemgang af agentspecifik konfiguration: Agent bruger AllowRoot, PidFile og StartAgents=0 uden passive checks; Agent 2 bruger ControlSocket og Docker-plugin. PSK og kontroltegn valideres før agentstart. Ingen eval af brugerinput.
-- Shellfiler gemt som LF; .gitattributes fastholder formatet.
+- Checked JSON parsing, unique slugs, version format, option/schema consistency, and different default ports for both apps.
+- Checked Dockerfiles for the correct official alpine-latest images.
+- Manually reviewed agent-specific configuration: Agent uses AllowRoot, PidFile, and StartAgents=0 without passive checks; Agent 2 uses ControlSocket and the Docker plugin. PSK values and control characters are validated before startup. User input is not evaluated as shell code.
+- Shell files use LF line endings; .gitattributes preserves this format.
+- Translated app descriptions, setup documentation, changelogs, and this validation report into English in app version 0.0.2.1. Runtime behavior is unchanged by the translation.
 
-## Ikke gennemført
+## Not performed
 
-Ingen Docker til rådighed lokalt: builds, shell/jq-runtime, agent-opstart, Home Assistant-schema, TLS-forbindelser og reelle målinger er ikke afprøvet. GitHub Actions er klargjort, men er ikke kørt eller uploadet herfra. En grøn CI-test vil heller ikke erstatte Supervisor- og Zabbix-integrationstest.
+Docker is unavailable locally: builds, shell/jq execution, agent startup, Home Assistant schema validation, TLS connections, and real measurements have not been tested. GitHub Actions has been prepared but has not been run or uploaded from this environment. Passing CI would not replace Supervisor and Zabbix integration testing.
 
-## Reproducerbar containertest
+## Reproducible container tests
 
-På Linux med Docker og jq, fra repository-roden, for hver app:
+On Linux with Docker and jq, run from the repository root:
 
     docker build --pull --no-cache -t ha-zabbix-test zabbix_agent
     sh tests/smoke.sh zabbix_agent
     docker build --pull --no-cache -t ha-zabbix-test zabbix_agent2
     sh tests/smoke.sh zabbix_agent2
 
-GitHub-workflowen kører samme test på amd64 og arm64. Testen undersøger aktive/passive checks, PSK-opstart, agent.ping samt ugyldig PSK og manglende server. Den beviser ikke netværks-TLS-handshake eller korrektheden af værtsmålinger.
+The GitHub workflow is configured to run the same tests on amd64 and arm64. The tests cover active/passive checks, PSK startup, agent.ping, invalid PSK values, and missing servers. They do not verify network TLS handshakes or the accuracy of host measurements.
 
-## Test på Home Assistant før almindelig brug
+## Home Assistant testing before regular use
 
-1. Installer hver app gennem repositoryet. Kontrollér build, log og agent.version; verificér stabil upstream-version.
-2. Bekræft aktive checks i Zabbix og at aktiv-only ikke lytter på en passiv port.
-3. Test passive checks fra tilladt og afvist adresse, inkl. de valgte lytteporte.
-4. Kør begge apps samtidig med forskellige Zabbix-hostnavne og porte.
-5. Test Agent 2's container-discovery og statistik. Sammenhold proces-, netværks-, CPU- og hukommelsesdata med værten. Tilpas filsystem-discovery.
-6. Test PSK med korrekt nøgle, forkert nøgle og ukrypteret forbindelse. De sidste to skal afvises i PSK-tilstand.
-7. Test genstart, stop, værtsgenstart og backup. Kontrollér manglende data og at hemmeligheder ikke logges.
-8. Genopbyg efter upstream-opdatering og verificér den nye version og template-kompatibilitet.
+1. Install each app from the repository. Check the build, log, and agent.version; verify a stable upstream version.
+2. Confirm active checks in Zabbix and verify that active-only mode does not listen on a passive port.
+3. Test passive checks from allowed and denied addresses, including the selected listening ports.
+4. Run both apps together using different Zabbix hostnames and ports.
+5. Test Agent 2 container discovery and statistics. Compare process, network, CPU, and memory data with the host. Adjust filesystem discovery.
+6. Test PSK with the correct key, an incorrect key, and an unencrypted connection. The latter two must be rejected in PSK mode.
+7. Test restart, stop, host reboot, and backup. Check for missing data and ensure secrets are not logged.
+8. Rebuild after an upstream update and verify the new version and template compatibility.
 
-Ingen produktionsklarhed er erklæret.
+Production readiness has not been declared.

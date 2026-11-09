@@ -1,7 +1,12 @@
+# 0.0.2.1
+
+- Translate all app descriptions and documentation into English.
+- No changes to agent behavior.
+
 # 0.0.2.0
 
-- To separate apps til Zabbix Agent og Agent 2.
-- Officielle alpine-latest images for nyeste stabile Alpine-udgave.
-- Konfigurerbar passiv lytteport for samtidig drift.
-- Aktive/passive checks og valgfri TLS-PSK.
-- GitHub-buildtest for amd64 og aarch64.
+- Two separate apps for Zabbix Agent and Agent 2.
+- Official alpine-latest images for the latest stable Alpine release.
+- Configurable passive listening ports for running both apps together.
+- Active/passive checks and optional TLS-PSK.
+- GitHub build tests for amd64 and aarch64.
