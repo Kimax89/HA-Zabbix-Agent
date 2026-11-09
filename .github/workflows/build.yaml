@@ -1,0 +1,23 @@
+name: Build and smoke test
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        app: [zabbix_agent, zabbix_agent2]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax
+        run: sh -n "${{ matrix.app }}/run.sh"
+      - name: Build latest stable Alpine image
+        run: docker build --pull --no-cache -t ha-zabbix-test "${{ matrix.app }}"
+      - name: Test startup and configuration
+        run: sh tests/smoke.sh "${{ matrix.app }}"

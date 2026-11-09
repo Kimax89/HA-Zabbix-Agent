@@ -1,0 +1,34 @@
+{
+  "name": "Zabbix Agent",
+  "version": "0.0.2.0",
+  "slug": "zabbix_agent",
+  "url": "https://github.com/Kimax89/HA-Zabbix-Agent",
+  "description": "Zabbix Agent til Home Assistant-vært",
+  "arch": [
+    "amd64",
+    "aarch64"
+  ],
+  "startup": "services",
+  "boot": "auto",
+  "stage": "experimental",
+  "init": true,
+  "host_network": true,
+  "host_pid": true,
+  "host_uts": true,
+  "options": {
+    "hostname": "homeassistant-agent",
+    "server_active": "",
+    "server_passive": "",
+    "tls_psk_identity": "",
+    "tls_psk": "",
+    "listen_port": 10052
+  },
+  "schema": {
+    "hostname": "str",
+    "server_active": "str",
+    "server_passive": "str",
+    "tls_psk_identity": "str",
+    "tls_psk": "password",
+    "listen_port": "port"
+  }
+}
