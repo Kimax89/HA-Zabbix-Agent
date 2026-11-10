@@ -1,6 +1,6 @@
 {
   "name": "Zabbix Agent 2",
-  "version": "0.0.2.1",
+  "version": "0.0.2.2",
   "slug": "zabbix_agent2",
   "url": "https://github.com/Kimax89/HA-Zabbix-Agent",
   "description": "Zabbix Agent 2 for the Home Assistant host and Docker containers",

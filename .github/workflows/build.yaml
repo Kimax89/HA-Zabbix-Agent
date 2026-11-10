@@ -7,6 +7,7 @@ permissions:
   contents: read
 jobs:
   test:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -14,9 +15,17 @@ jobs:
         app: [zabbix_agent, zabbix_agent2]
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Check shell syntax
-        run: sh -n "${{ matrix.app }}/run.sh"
+        run: |
+          sh -n "${{ matrix.app }}/run.sh"
+          sh -n tests/smoke.sh
+      - name: Validate metadata and input handling
+        run: |
+          python3 -m pip install PyYAML==6.0.3
+          python3 tests/validate.py
       - name: Build latest stable Alpine image
         run: docker build --pull --no-cache -t ha-zabbix-test "${{ matrix.app }}"
       - name: Test startup and configuration

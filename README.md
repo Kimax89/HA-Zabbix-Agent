@@ -2,7 +2,7 @@
 
 Repository: https://github.com/Kimax89/HA-Zabbix-Agent
 
-Two separate Home Assistant apps, app version **0.0.2.1**:
+Two separate Home Assistant apps, app version **0.0.2.2**:
 
 | App | Official base image | Default passive check port | Docker plugin |
 | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ The host root filesystem and SMART devices are not generally mounted. Filesystem
 
 `alpine-latest` is fetched during a new build. Restarting does not update the agent. Select **Rebuild** to fetch a newer upstream image, then verify the installed version in the log. For builds outside Home Assistant, use `docker build --pull --no-cache`. New app versions in the repository produce an update notification in Home Assistant; upstream image changes alone do not.
 
-The GitHub Actions workflow is configured to build both apps on amd64 and arm64 and run `tests/smoke.sh`. The test checks active/passive startup, PSK configuration, and rejection of invalid configuration. It does not replace Home Assistant integration testing. See `VALIDATION.md` for checks actually performed. Both apps are experimental.
+The GitHub Actions workflow is configured to build both apps on amd64 and arm64 and run `tests/smoke.sh`. The tests check active/passive startup, actual passive listening ports, custom ports, PSK configuration, and the expected rejection messages for invalid configuration. It does not replace Home Assistant integration testing. For local metadata and input-validation checks, install Python 3, PyYAML and jq, then run `python3 tests/validate.py`. See `VALIDATION.md` for checks actually performed. Both apps are experimental.
 
 ## Sources
 
