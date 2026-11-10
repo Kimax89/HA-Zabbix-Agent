@@ -26,6 +26,7 @@ jobs:
         run: |
           python3 -m pip install PyYAML==6.0.3
           python3 tests/validate.py
+          python3 templates/home_assistant/test_templates.py
       - name: Build latest stable Alpine image
         run: docker build --pull --no-cache -t ha-zabbix-test "${{ matrix.app }}"
       - name: Test startup and configuration

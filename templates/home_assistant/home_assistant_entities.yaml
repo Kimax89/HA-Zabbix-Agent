@@ -1,0 +1,657 @@
+zabbix_export:
+  version: '8.0'
+  template_groups:
+  - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
+    name: Templates/Applications
+  templates:
+  - uuid: faa4c0edeef7413c99d3140f5d806dfc
+    template: Home Assistant entities by HTTP
+    name: Home Assistant entities by HTTP
+    description: Home Assistant Core API and entity monitoring. Template version 1.0.0.0. Uses GET requests only.
+      Configure HA.URL and HA.TOKEN. Link Linux and Docker templates separately for host/container metrics.
+    groups:
+    - name: Templates/Applications
+    items:
+    - uuid: cc062714751f4a74b47778c361626482
+      name: 'Home Assistant: Get entity states'
+      type: HTTP_AGENT
+      key: ha.states.get
+      delay: '{$HA.POLL.INTERVAL}'
+      history: '0'
+      value_type: TEXT
+      url: '{$HA.URL}/api/states'
+      timeout: 10s
+      status_codes: '200'
+      follow_redirects: 'NO'
+      verify_peer: 'YES'
+      verify_host: 'YES'
+      headers:
+      - name: Authorization
+        value: Bearer {$HA.TOKEN}
+      - name: Accept
+        value: application/json
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - |-
+          var states = JSON.parse(value);
+          if (!Array.isArray(states)) { throw 'Expected an entity-state array'; }
+          var result = [];
+          for (var i = 0; i < states.length; i++) {
+              var s = states[i];
+              if (!s || typeof s.entity_id !== 'string' ||
+                  !/^[a-z0-9_]+\.[a-z0-9_]+$/.test(s.entity_id) || typeof s.state !== 'string') {
+                  throw 'Invalid entity-state record';
+              }
+              var a = s.attributes || {};
+              result.push({entity_id: s.entity_id, state: s.state,
+                  unit: typeof a.unit_of_measurement === 'string' ? a.unit_of_measurement : '',
+                  device_class: typeof a.device_class === 'string' ? a.device_class : '',
+                  last_changed: s.last_changed || ''});
+          }
+          result.sort(function(a, b) { return a.entity_id < b.entity_id ? -1 : a.entity_id > b.entity_id ? 1 : 0; });
+          return JSON.stringify(result);
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: api
+    - uuid: 23449a0cba9e4f0f806b5a0db4522bc9
+      name: 'Home Assistant: Get Core configuration'
+      type: HTTP_AGENT
+      key: ha.config.get
+      delay: '{$HA.POLL.INTERVAL}'
+      history: '0'
+      value_type: TEXT
+      url: '{$HA.URL}/api/config'
+      timeout: 10s
+      status_codes: '200'
+      follow_redirects: 'NO'
+      verify_peer: 'YES'
+      verify_host: 'YES'
+      headers:
+      - name: Authorization
+        value: Bearer {$HA.TOKEN}
+      - name: Accept
+        value: application/json
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - |-
+          var c = JSON.parse(value);
+          if (!c || typeof c.version !== 'string' || !Array.isArray(c.components)) {
+              throw 'Expected Home Assistant configuration';
+          }
+          return JSON.stringify({version: c.version, state: c.state || '',
+              time_zone: c.time_zone || '', component_count: c.components.length});
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: api
+    - uuid: c7536939c27c42c18a5228a8d133b015
+      name: 'Home Assistant: Total entities'
+      type: DEPENDENT
+      key: ha.entities.total
+      delay: '0'
+      history: 7d
+      value_type: UNSIGNED
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - return JSON.parse(value).length;
+      master_item:
+        key: ha.states.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+      trends: 30d
+      triggers:
+      - uuid: 2b1aa08710f941978da6adf8d48e44a7
+        name: 'Home Assistant: No valid entity data from API'
+        expression: nodata(/Home Assistant entities by HTTP/ha.entities.total,{$HA.API.NODATA})=1
+        priority: HIGH
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: health
+    - uuid: 1cd8c1904c8247248b8cfda91e999375
+      name: 'Home Assistant: Unavailable entities'
+      type: DEPENDENT
+      key: ha.entities.unavailable
+      delay: '0'
+      history: 7d
+      value_type: UNSIGNED
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - return JSON.parse(value).filter(function(e) { return e.state === 'unavailable'; }).length;
+      master_item:
+        key: ha.states.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+      trends: 30d
+    - uuid: 7e2c31a322244733a61b4d3dd26f5655
+      name: 'Home Assistant: Entities with unknown state'
+      type: DEPENDENT
+      key: ha.entities.unknown
+      delay: '0'
+      history: 7d
+      value_type: UNSIGNED
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - return JSON.parse(value).filter(function(e) { return e.state === 'unknown'; }).length;
+      master_item:
+        key: ha.states.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+      trends: 30d
+    - uuid: d5901df6675747a6be1504b97fa21c3f
+      name: 'Home Assistant: Pending update entities'
+      type: DEPENDENT
+      key: ha.updates.pending
+      delay: '0'
+      history: 7d
+      value_type: UNSIGNED
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - return JSON.parse(value).filter(function(e) { return e.entity_id.indexOf('update.') === 0 && e.state ===
+          'on'; }).length;
+      master_item:
+        key: ha.states.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+      trends: 30d
+    - uuid: 6bd7f45143ad4b37a3ae580daf3afc0f
+      name: 'Home Assistant: Disabled automations'
+      type: DEPENDENT
+      key: ha.automations.disabled
+      delay: '0'
+      history: 7d
+      value_type: UNSIGNED
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - return JSON.parse(value).filter(function(e) { return e.entity_id.indexOf('automation.') === 0 && e.state
+          === 'off'; }).length;
+      master_item:
+        key: ha.states.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+      trends: 30d
+    - uuid: 5a0819fb489e449d953c23482b543e4a
+      name: 'Home Assistant: Core version'
+      type: DEPENDENT
+      key: ha.core.version
+      delay: '0'
+      history: 7d
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.version
+      master_item:
+        key: ha.config.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+    - uuid: 81573ac61a9545338119b028fa74fc9d
+      name: 'Home Assistant: Core lifecycle state'
+      type: DEPENDENT
+      key: ha.core.state
+      delay: '0'
+      history: 7d
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.state
+      master_item:
+        key: ha.config.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+    - uuid: be1104a8084b45b1bdb70f147cd0ab47
+      name: 'Home Assistant: Time zone'
+      type: DEPENDENT
+      key: ha.core.time_zone
+      delay: '0'
+      history: 7d
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.time_zone
+      master_item:
+        key: ha.config.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+    - uuid: b24e680da7764a6598f7c392688ade37
+      name: 'Home Assistant: Loaded components'
+      type: DEPENDENT
+      key: ha.components.total
+      delay: '0'
+      history: 7d
+      value_type: UNSIGNED
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.component_count
+      master_item:
+        key: ha.config.get
+      tags:
+      - tag: application
+        value: home-assistant
+      - tag: component
+        value: entities
+      trends: 30d
+      triggers:
+      - uuid: 9dd2d9d88a7d4f46af152a74c7ed28c5
+        name: 'Home Assistant: No valid Core configuration from API'
+        expression: nodata(/Home Assistant entities by HTTP/ha.components.total,{$HA.API.NODATA})=1
+        priority: WARNING
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: health
+    discovery_rules:
+    - uuid: ed643fd7985645f3bcc64cc1459af165
+      name: 'Home Assistant: Entity discovery'
+      type: DEPENDENT
+      key: ha.entity.discovery
+      delay: '0'
+      lifetime: 7d
+      enabled_lifetime_type: DISABLE_NEVER
+      master_item:
+        key: ha.states.get
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.MATCHES}'
+          formulaid: A
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.NOT_MATCHES}'
+          operator: NOT_MATCHES_REGEX
+          formulaid: B
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - |-
+          var entities = JSON.parse(value), result = [];
+          for (var i = 0; i < entities.length; i++) {
+              var e = entities[i];
+              if (true) {
+                  result.push({'{#ENTITY_ID}': e.entity_id, '{#UNIT}': e.unit});
+              }
+          }
+          return JSON.stringify(result);
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1h
+      item_prototypes:
+      - uuid: 458df7914c2e405dbfeab155b6edc205
+        name: 'Entity {#ENTITY_ID}: Data'
+        type: DEPENDENT
+        key: ha.entity.data[{#ENTITY_ID}]
+        delay: '0'
+        history: '0'
+        value_type: TEXT
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $[?(@.entity_id == "{#ENTITY_ID}")].first()
+          error_handler: DISCARD_VALUE
+        master_item:
+          key: ha.states.get
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: entities
+      - uuid: b337dea373a64647830054671fd17ace
+        name: 'Entity {#ENTITY_ID}: State'
+        type: DEPENDENT
+        key: ha.entity.state[{#ENTITY_ID}]
+        delay: '0'
+        history: 7d
+        value_type: TEXT
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.state
+        master_item:
+          key: ha.entity.data[{#ENTITY_ID}]
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: entities
+      - uuid: 7ea69322e4bb462aa9fcce04215ef5ee
+        name: 'Entity {#ENTITY_ID}: Available'
+        type: DEPENDENT
+        key: ha.entity.available[{#ENTITY_ID}]
+        delay: '0'
+        history: 7d
+        value_type: UNSIGNED
+        preprocessing:
+        - type: JAVASCRIPT
+          parameters:
+          - 'var e=JSON.parse(value); return e.state === ''unavailable'' || e.state === ''unknown'' ? 0 : 1;'
+        master_item:
+          key: ha.entity.data[{#ENTITY_ID}]
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: entities
+        trends: 30d
+        trigger_prototypes:
+        - uuid: 609ca1f1d9644da9afc5080e4b352646
+          name: 'Home Assistant: Entity {#ENTITY_ID} is unavailable or unknown'
+          expression: max(/Home Assistant entities by HTTP/ha.entity.available[{#ENTITY_ID}],#3)=0 and count(/Home
+            Assistant entities by HTTP/ha.entity.available[{#ENTITY_ID}],#3)=3 and nodata(/Home Assistant entities
+            by HTTP/ha.entity.available[{#ENTITY_ID}],{$HA.API.NODATA})=0
+          priority: WARNING
+          tags:
+          - tag: application
+            value: home-assistant
+          - tag: component
+            value: health
+      - uuid: 0c3d72bbb8d345cb8b726935431570f0
+        name: 'Entity {#ENTITY_ID}: Last state change'
+        type: DEPENDENT
+        key: ha.entity.last_changed[{#ENTITY_ID}]
+        delay: '0'
+        history: 7d
+        value_type: UNSIGNED
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.last_changed
+        - type: JAVASCRIPT
+          parameters:
+          - var text=value.replace(/(\.\d{3})\d+/, '$1'); var time=Date.parse(text); if (!isFinite(time)) { throw
+            'Invalid timestamp'; } return Math.floor(time/1000);
+          error_handler: DISCARD_VALUE
+        master_item:
+          key: ha.entity.data[{#ENTITY_ID}]
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: entities
+        trends: 30d
+        units: unixtime
+    - uuid: b9542fba4aed4e06a774bdcbc7751012
+      name: 'Home Assistant: Numeric entity discovery'
+      type: DEPENDENT
+      key: ha.numeric.discovery
+      delay: '0'
+      lifetime: 7d
+      enabled_lifetime_type: DISABLE_NEVER
+      master_item:
+        key: ha.states.get
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.MATCHES}'
+          formulaid: A
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.NOT_MATCHES}'
+          operator: NOT_MATCHES_REGEX
+          formulaid: B
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - |-
+          var entities = JSON.parse(value), result = [];
+          for (var i = 0; i < entities.length; i++) {
+              var e = entities[i];
+              if (/^(sensor|number|input_number|counter)\./.test(e.entity_id) && (e.unit !== '' || /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(e.state.trim()))) {
+                  result.push({'{#ENTITY_ID}': e.entity_id, '{#UNIT}': e.unit});
+              }
+          }
+          return JSON.stringify(result);
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1h
+      item_prototypes:
+      - uuid: b598ae926c584769b6c568d67f92921c
+        name: 'Entity {#ENTITY_ID}: Numeric value'
+        type: DEPENDENT
+        key: ha.entity.numeric[{#ENTITY_ID}]
+        delay: '0'
+        history: 7d
+        value_type: FLOAT
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $[?(@.entity_id == "{#ENTITY_ID}")].first()
+          error_handler: DISCARD_VALUE
+        - type: JSONPATH
+          parameters:
+          - $.state
+        - type: JAVASCRIPT
+          parameters:
+          - |-
+            var text = String(value).trim();
+            if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)) {
+                throw 'Not a numeric state';
+            }
+            var number = Number(text);
+            if (!isFinite(number)) { throw 'Non-finite state'; }
+            return number;
+          error_handler: DISCARD_VALUE
+        master_item:
+          key: ha.states.get
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: entities
+        trends: 30d
+        units: '{#UNIT}'
+    - uuid: 80f5c04d7efc4616bf822bab8b03e8e5
+      name: 'Home Assistant: Battery sensor discovery'
+      type: DEPENDENT
+      key: ha.battery.discovery
+      delay: '0'
+      lifetime: 7d
+      enabled_lifetime_type: DISABLE_NEVER
+      master_item:
+        key: ha.states.get
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.MATCHES}'
+          formulaid: A
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.NOT_MATCHES}'
+          operator: NOT_MATCHES_REGEX
+          formulaid: B
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - |-
+          var entities = JSON.parse(value), result = [];
+          for (var i = 0; i < entities.length; i++) {
+              var e = entities[i];
+              if (e.device_class === 'battery' && e.unit === '%') {
+                  result.push({'{#ENTITY_ID}': e.entity_id, '{#UNIT}': e.unit});
+              }
+          }
+          return JSON.stringify(result);
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1h
+      item_prototypes:
+      - uuid: 701456ec5fc142cc93399ae48d98cf2b
+        name: 'Battery {#ENTITY_ID}: Level'
+        type: DEPENDENT
+        key: ha.battery.level[{#ENTITY_ID}]
+        delay: '0'
+        history: 7d
+        value_type: FLOAT
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $[?(@.entity_id == "{#ENTITY_ID}")].first()
+          error_handler: DISCARD_VALUE
+        - type: JSONPATH
+          parameters:
+          - $.state
+        - type: JAVASCRIPT
+          parameters:
+          - |-
+            var text = String(value).trim();
+            if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)) {
+                throw 'Not a numeric state';
+            }
+            var number = Number(text);
+            if (!isFinite(number)) { throw 'Non-finite state'; }
+            return number;
+          error_handler: DISCARD_VALUE
+        master_item:
+          key: ha.states.get
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: entities
+        trends: 30d
+        units: '%'
+        trigger_prototypes:
+        - uuid: 8bd9b758ad7041ae97380c7689b6950b
+          name: 'Home Assistant: Battery {#ENTITY_ID} is low'
+          expression: last(/Home Assistant entities by HTTP/ha.battery.level[{#ENTITY_ID}])<{$HA.BATTERY.MIN} and
+            nodata(/Home Assistant entities by HTTP/ha.battery.level[{#ENTITY_ID}],{$HA.API.NODATA})=0
+          priority: WARNING
+          tags:
+          - tag: application
+            value: home-assistant
+          - tag: component
+            value: health
+    - uuid: e39de26798104b51b27079d6bd4d8374
+      name: 'Home Assistant: Update entity discovery'
+      type: DEPENDENT
+      key: ha.update.discovery
+      delay: '0'
+      lifetime: 7d
+      enabled_lifetime_type: DISABLE_NEVER
+      master_item:
+        key: ha.states.get
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.MATCHES}'
+          formulaid: A
+        - macro: '{#ENTITY_ID}'
+          value: '{$HA.ENTITY.NOT_MATCHES}'
+          operator: NOT_MATCHES_REGEX
+          formulaid: B
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - |-
+          var entities = JSON.parse(value), result = [];
+          for (var i = 0; i < entities.length; i++) {
+              var e = entities[i];
+              if (e.entity_id.indexOf('update.') === 0) {
+                  result.push({'{#ENTITY_ID}': e.entity_id, '{#UNIT}': e.unit});
+              }
+          }
+          return JSON.stringify(result);
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1h
+      item_prototypes:
+      - uuid: a1638b364c4741198c8276bda311e564
+        name: 'Update {#ENTITY_ID}: Pending'
+        type: DEPENDENT
+        key: ha.update.pending[{#ENTITY_ID}]
+        delay: '0'
+        history: 7d
+        value_type: UNSIGNED
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $[?(@.entity_id == "{#ENTITY_ID}")].first()
+          error_handler: DISCARD_VALUE
+        - type: JSONPATH
+          parameters:
+          - $.state
+        - type: JAVASCRIPT
+          parameters:
+          - if (value === 'on') { return 1; } if (value === 'off') { return 0; } throw 'Unknown update state';
+          error_handler: DISCARD_VALUE
+        master_item:
+          key: ha.states.get
+        tags:
+        - tag: application
+          value: home-assistant
+        - tag: component
+          value: entities
+        trends: 30d
+        trigger_prototypes:
+        - uuid: 00f86a20c3eb447abccca33003d0dd8b
+          name: 'Home Assistant: Update available for {#ENTITY_ID}'
+          expression: last(/Home Assistant entities by HTTP/ha.update.pending[{#ENTITY_ID}])=1 and nodata(/Home
+            Assistant entities by HTTP/ha.update.pending[{#ENTITY_ID}],{$HA.API.NODATA})=0
+          priority: INFO
+          tags:
+          - tag: application
+            value: home-assistant
+          - tag: component
+            value: health
+    macros:
+    - macro: '{$HA.URL}'
+      value: http://homeassistant.local:8123
+      description: Base URL reachable from Zabbix server/proxy; no trailing slash.
+    - macro: '{$HA.TOKEN}'
+      value: ''
+      description: Home Assistant long-lived access token. Configure on the Zabbix host as a secret macro.
+      type: SECRET_TEXT
+    - macro: '{$HA.POLL.INTERVAL}'
+      value: 60s
+      description: API polling interval.
+    - macro: '{$HA.API.NODATA}'
+      value: 5m
+      description: Alert if valid API data is not received for this period; keep longer than three polling intervals.
+    - macro: '{$HA.ENTITY.MATCHES}'
+      value: .*
+      description: Discover entity IDs matching this regular expression.
+    - macro: '{$HA.ENTITY.NOT_MATCHES}'
+      value: ^$
+      description: Do not discover entity IDs matching this regular expression; default excludes none.
+    - macro: '{$HA.BATTERY.MIN}'
+      value: '20'
+      description: Low battery threshold in percent.

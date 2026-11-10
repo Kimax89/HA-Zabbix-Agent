@@ -2,6 +2,12 @@
 
 Repository: https://github.com/Kimax89/HA-Zabbix-Agent
 
+## Optional extra: Home Assistant API template
+
+The standalone Zabbix 8.0 template **Home Assistant entities by HTTP** is available in [templates/home_assistant](templates/home_assistant/README.md). It monitors the Home Assistant API and entities without an agent or parent templates. See that folder for import instructions, configuration, and validation limits.
+
+[Download the template YAML](https://raw.githubusercontent.com/Kimax89/HA-Zabbix-Agent/main/templates/home_assistant/home_assistant_entities.yaml) and import it into Zabbix. This is an optional extra: installing either agent app does not install the template, and using the template does not require either app.
+
 Two separate Home Assistant apps, app version **0.0.2.2**:
 
 | App | Official base image | Default passive check port | Docker plugin |
