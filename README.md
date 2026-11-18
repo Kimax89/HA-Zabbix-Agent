@@ -8,7 +8,7 @@ The standalone Zabbix 8.0 template **Home Assistant entities by HTTP** is availa
 
 [Download the template YAML](https://raw.githubusercontent.com/Kimax89/HA-Zabbix-Agent/main/templates/home_assistant/home_assistant_entities.yaml) and import it into Zabbix. This is an optional extra: installing either agent app does not install the template, and using the template does not require either app.
 
-Two separate Home Assistant apps, app version **1.0.0.0**:
+Two separate Home Assistant apps, app version **1.0.0.1**:
 
 | App | Official base image | Default passive check port | Docker plugin |
 | --- | --- | --- | --- |

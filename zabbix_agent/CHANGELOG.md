@@ -1,3 +1,8 @@
+# 1.0.0.1
+
+- Add a circular red app icon with the Zabbix Z.
+- Include editable SVG artwork and regeneration instructions.
+
 # 1.0.0.0
 
 - Change the Home Assistant app stage from experimental to stable.

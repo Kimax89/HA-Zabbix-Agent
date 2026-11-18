@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Zabbix Agent 2">
+<title>Zabbix Agent 2</title>
+<circle cx="128" cy="128" r="120" fill="#D40000"/>
+<polygon points="75.0000,198.1040 75.0000,180.2000 154.5160,73.5600 75.0000,73.5600 75.0000,54.0000 181.5768,54.0000 181.5768,71.9120 102.0608,178.5520 181.5768,178.5520 181.5768,198.1040" fill="#FFFFFF"/>
+<circle cx="212" cy="212" r="34" fill="#D40000"/>
+<circle cx="212" cy="212" r="31" fill="#FFFFFF"/>
+<text x="212" y="212" dy=".35em" text-anchor="middle" font-family="Arial, DejaVu Sans, sans-serif" font-weight="700" font-size="44" fill="#D40000">2</text>
+</svg>
