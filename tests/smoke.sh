@@ -70,13 +70,16 @@ assert_listener() {
     attempt=0
     while [ "$attempt" -lt 15 ]; do
         # Read failures must fail the test, rather than look like a closed port.
-        sockets=$(docker exec "$container" cat /proc/net/tcp)
+        # Go can expose a dual-stack listener only in tcp6, even for IPv4 clients.
+        sockets=$(docker exec "$container" sh -ec \
+          'cat /proc/net/tcp; if [ -e /proc/net/tcp6 ]; then cat /proc/net/tcp6; fi')
         actual=$(printf '%s\n' "$sockets" | awk -v port="$test_port" '$2 ~ (":" sprintf("%04X", port) "$") && $4 == "0A" {found=1} END {print found ? "open" : "closed"}')
         if [ "$actual" = "$expected" ]; then return; fi
         attempt=$((attempt + 1))
         sleep 1
     done
-    echo "Expected passive port $expected, found $actual" >&2
+    echo "Expected passive port $expected, found $actual (IPv4 and IPv6 checked)" >&2
+    printf '%s\n' "$sockets" >&2
     return 1
 }
 expect_failure() {

@@ -114,5 +114,29 @@ class StartupValidationTests(unittest.TestCase):
                     self.assertNotEqual(run_filter(filters["psk"], key, raw=True).returncode, 0)
 
 
+class ListenerValidationTests(unittest.TestCase):
+    def test_ipv4_ipv6_and_closed_ports(self):
+        script = (ROOT / "tests/smoke.sh").read_text()
+        expression = re.search(r"awk -v port=\"\$test_port\" '([^']+)'", script).group(1)
+        awk = shutil.which("awk")
+        command = [awk] if awk else [str(ROOT / ".tools/busybox.exe"), "awk"]
+        ipv4 = "0: 00000000:2742 00000000:0000 0A 00000000:00000000\n"
+        ipv6 = "0: 00000000000000000000000000000000:2742 00000000000000000000000000000000:0000 0A 00000000:00000000\n"
+        for sockets, port, expected in (
+            (ipv4, 10050, "open"),
+            (ipv6, 10050, "open"),
+            (ipv4 + ipv6, 10050, "open"),
+            (ipv6, 10052, "closed"),
+            (ipv6.replace(":2742", ":2744"), 10052, "open"),
+            (ipv6.replace(" 0A ", " 01 "), 10050, "closed"),
+            ("sl local_address rem_address st\n", 10050, "closed"),
+        ):
+            with self.subTest(port=port, sockets=sockets, expected=expected):
+                result = subprocess.run(command + ["-v", f"port={port}", expression],
+                    input=sockets, text=True, capture_output=True, timeout=10, check=False)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), expected)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
