@@ -8,7 +8,7 @@ The standalone Zabbix 8.0 template **Home Assistant entities by HTTP** is availa
 
 [Download the template YAML](https://raw.githubusercontent.com/Kimax89/HA-Zabbix-Agent/main/templates/home_assistant/home_assistant_entities.yaml) and import it into Zabbix. This is an optional extra: installing either agent app does not install the template, and using the template does not require either app.
 
-Two separate Home Assistant apps, app version **0.0.2.2**:
+Two separate Home Assistant apps, app version **1.0.0.0**:
 
 | App | Official base image | Default passive check port | Docker plugin |
 | --- | --- | --- | --- |
@@ -62,7 +62,7 @@ The host root filesystem and SMART devices are not generally mounted. Filesystem
 
 `alpine-latest` is fetched during a new build. Restarting does not update the agent. Select **Rebuild** to fetch a newer upstream image, then verify the installed version in the log. For builds outside Home Assistant, use `docker build --pull --no-cache`. New app versions in the repository produce an update notification in Home Assistant; upstream image changes alone do not.
 
-The GitHub Actions workflow is configured to build both apps on amd64 and arm64 and run `tests/smoke.sh`. The tests check active/passive startup, actual passive listening ports, custom ports, PSK configuration, and the expected rejection messages for invalid configuration. It does not replace Home Assistant integration testing. For local metadata and input-validation checks, install Python 3, PyYAML and jq, then run `python3 tests/validate.py`. See `VALIDATION.md` for checks actually performed. Both apps are experimental.
+The GitHub Actions workflow is configured to build both apps on amd64 and arm64 and run `tests/smoke.sh`. The tests check active/passive startup, actual passive listening ports, custom ports, PSK configuration, and the expected rejection messages for invalid configuration. It does not replace Home Assistant integration testing. For local metadata and input-validation checks, install Python 3, PyYAML and jq, then run `python3 tests/validate.py`. See `VALIDATION.md` for checks actually performed. Both apps use Home Assistant's stable release stage. The stage change does not by itself verify runtime compatibility; consult the validation report and CI results.
 
 ## Sources
 
@@ -71,4 +71,4 @@ The GitHub Actions workflow is configured to build both apps on amd64 and arm64 
 - https://hub.docker.com/r/zabbix/zabbix-agent2/
 - https://developers.home-assistant.io/docs/apps/configuration/
 
-Zabbix 7.0 and later use AGPL-3.0. Preserve upstream license notices when distributing. These files have been prepared locally and have not been uploaded to GitHub from this environment.
+Zabbix 7.0 and later use AGPL-3.0. Preserve upstream license notices when distributing. The source and release metadata are maintained in this repository.

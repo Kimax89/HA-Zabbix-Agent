@@ -1,3 +1,8 @@
+# 1.0.0.0
+
+- Change the Home Assistant app stage from experimental to stable.
+- Release metadata update only; agent behavior is unchanged.
+
 # 0.0.2.2
 
 - Fix CI cleanup of root-owned container data using named Docker volumes.

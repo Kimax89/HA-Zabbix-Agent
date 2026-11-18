@@ -1,6 +1,6 @@
 {
   "name": "Zabbix Agent",
-  "version": "0.0.2.2",
+  "version": "1.0.0.0",
   "slug": "zabbix_agent",
   "url": "https://github.com/Kimax89/HA-Zabbix-Agent",
   "description": "Zabbix Agent for the Home Assistant host",
@@ -10,7 +10,7 @@
   ],
   "startup": "services",
   "boot": "auto",
-  "stage": "experimental",
+  "stage": "stable",
   "init": true,
   "host_network": true,
   "host_pid": true,
