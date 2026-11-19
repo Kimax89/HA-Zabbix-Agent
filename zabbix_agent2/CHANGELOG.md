@@ -1,3 +1,11 @@
+# 1.0.0.2
+
+- Add app-store introductions, complete setup documentation and English option labels.
+- Consolidate shared startup validation while preserving option names and default ports.
+- Validate PSK settings before writing runtime files; enforce private file permissions.
+- Exclude generated runtime files from backups and remove unused API tokens from the agent environment.
+- Add reproducible development checks and real passive/PSK protocol tests.
+
 # 1.0.0.1
 
 - Add a circular red app icon with the Zabbix Z and a white Agent 2 badge.

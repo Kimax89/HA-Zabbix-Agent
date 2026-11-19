@@ -1,8 +1,8 @@
 {
   "name": "Zabbix Agent",
-  "version": "1.0.0.1",
+  "version": "1.0.0.2",
   "slug": "zabbix_agent",
-  "url": "https://github.com/Kimax89/HA-Zabbix-Agent",
+  "url": "https://github.com/Kimax89/HA-Zabbix-Agent/tree/main/zabbix_agent",
   "description": "Zabbix Agent for the Home Assistant host",
   "arch": [
     "amd64",
@@ -30,5 +30,10 @@
     "tls_psk_identity": "str",
     "tls_psk": "password",
     "listen_port": "port"
-  }
+  },
+  "apparmor": true,
+  "backup_exclude": [
+    "runtime",
+    "runtime/**"
+  ]
 }

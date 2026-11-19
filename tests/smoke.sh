@@ -29,6 +29,7 @@ trap 'exit 143' TERM
 
 write_options() {
     test_port=${5:-10050}
+    test_psk=$4
     jq -n --arg active "$1" --arg passive "$2" --arg identity "$3" --arg psk "$4" \
       --argjson port "$test_port" \
       '{hostname:"ci-agent",server_active:$active,server_passive:$passive,tls_psk_identity:$identity,tls_psk:$psk,listen_port:$port}' > "$data/options.json"
@@ -37,7 +38,7 @@ start() {
     volume=$(docker volume create)
     if [ "$app" = zabbix_agent2 ]; then
         container=$(docker create --init -v "$volume:/data" \
-          -v /var/run/docker.sock:/var/run/docker.sock:ro ha-zabbix-test)
+          -v /var/run/docker.sock:/run/docker.sock:ro ha-zabbix-test)
     else
         container=$(docker create --init -v "$volume:/data" ha-zabbix-test)
     fi
@@ -46,6 +47,7 @@ start() {
 }
 stop() {
     docker stop -t 10 "$container" >/dev/null
+    [ "$(docker inspect -f '{{.State.ExitCode}}' "$container")" != 137 ]
     docker rm -v "$container" >/dev/null
     container=
     docker volume rm "$volume" >/dev/null
@@ -64,6 +66,41 @@ assert_running() {
     done
     echo "Agent did not become ready: $output" >&2
     return 1
+}
+
+assert_private_permissions() {
+    [ "$(docker exec "$container" stat -c '%a' /data/runtime)" = 700 ]
+    [ "$(docker exec "$container" stat -c '%a' "/data/runtime/$config")" = 600 ]
+    if [ -n "$test_psk" ]; then
+        [ "$(docker exec "$container" stat -c '%a' /data/runtime/agent.psk)" = 600 ]
+    else
+        docker exec "$container" test ! -e /data/runtime/agent.psk
+    fi
+}
+
+assert_passive_ping() {
+    if [ -n "$test_psk" ]; then
+        reply=$(docker exec "$container" /usr/bin/zabbix_get -s 127.0.0.1 -p "$test_port" \
+          -k agent.ping -t 3 --tls-connect psk --tls-psk-identity ci-key --tls-psk-file /data/runtime/agent.psk)
+    else
+        reply=$(docker exec "$container" /usr/bin/zabbix_get -s 127.0.0.1 -p "$test_port" -k agent.ping -t 3)
+    fi
+    [ "$reply" = 1 ]
+}
+
+assert_psk_rejections() {
+    docker exec "$container" sh -ec \
+      'umask 077; printf "%s\n" 00000000000000000000000000000000 > /data/runtime/wrong.psk'
+    if docker exec "$container" /usr/bin/zabbix_get -s 127.0.0.1 -p "$test_port" -k agent.ping -t 3 \
+      --tls-connect psk --tls-psk-identity ci-key --tls-psk-file /data/runtime/wrong.psk >/dev/null 2>&1; then
+        echo 'Agent accepted the wrong PSK' >&2
+        exit 1
+    fi
+    if docker exec "$container" /usr/bin/zabbix_get -s 127.0.0.1 -p "$test_port" \
+      -k agent.ping -t 3 >/dev/null 2>&1; then
+        echo 'PSK-only agent accepted an unencrypted request' >&2
+        exit 1
+    fi
 }
 assert_listener() {
     expected=$1
@@ -89,31 +126,47 @@ expect_failure() {
     [ "$code" != 0 ]
     # Check the reason as well as the exit code, so unrelated failures cannot pass.
     docker logs "$container" 2>&1 | grep -F "$expected"
+    docker run --rm -v "$volume:/data" --entrypoint sh ha-zabbix-test -ec 'test ! -d /data/runtime'
     stop
 }
 
 write_options 127.0.0.1:10051 '' '' ''
 start
 assert_running
+assert_private_permissions
 assert_listener closed
 stop
 
 write_options '' 127.0.0.1 '' ''
 start
 assert_running
+assert_private_permissions
 assert_listener open
+assert_passive_ping
 stop
 
 write_options 127.0.0.1:10051 127.0.0.1 ci-key 0123456789abcdef0123456789abcdef
 start
 assert_running
+assert_private_permissions
 assert_listener open
+assert_passive_ping
+assert_psk_rejections
+# Restart must repair file modes left by an older version or a manual edit.
+docker exec "$container" chmod 0755 /data/runtime
+docker exec "$container" chmod 0644 /data/runtime/agent.psk "/data/runtime/$config"
+docker restart -t 10 "$container" >/dev/null
+assert_running
+assert_private_permissions
+assert_passive_ping
 stop
 
 write_options '' 127.0.0.1 '' '' 10052
 start
 assert_running
+assert_private_permissions
 assert_listener open
+assert_passive_ping
 stop
 
 write_options 127.0.0.1:10051 '' ci-key invalid

@@ -1,0 +1,24 @@
+configuration:
+  hostname:
+    name: Zabbix host name
+    description: Exact, case-sensitive Host name configured in Zabbix.
+  server_active:
+    name: Server/proxy for active checks
+    description: Address with optional port (normally 10051). Leave empty to disable
+      active checks.
+  server_passive:
+    name: Allowed servers for passive checks
+    description: Allowed IPs, DNS names or CIDR networks, comma-separated and without
+      ports. Empty disables the passive listener.
+  listen_port:
+    name: Passive check port
+    description: Host TCP port for passive checks (default 10052). Must be free; ignored
+      when passive checks are disabled.
+  tls_psk_identity:
+    name: TLS-PSK identity
+    description: Identity matching the Zabbix host. Fill in both PSK fields or leave
+      both empty.
+  tls_psk:
+    name: TLS-PSK secret key
+    description: Even-length hexadecimal secret, 32–512 characters. Configure the
+      same key in Zabbix; do not share it.

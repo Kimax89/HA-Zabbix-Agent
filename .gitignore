@@ -3,3 +3,6 @@
 Thumbs.db
 .tools/
 __pycache__/
+.ruff_cache/
+.venv/
+.template-test-*/

@@ -1,12 +1,50 @@
 name: Build and smoke test
 on:
   push:
+    paths-ignore:
+      - '**/*.md'
   pull_request:
+    paths-ignore:
+      - '**/*.md'
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install development checks
+        run: python3 -m pip install -r requirements-dev.txt
+      - name: Check Python and shared runtime
+        run: |
+          ruff check .
+          ruff format --check .
+          python3 scripts/sync_runtime.py --check
+      - name: Check shell scripts
+        run: |
+          shellcheck -x -S warning -s sh runtime/agent-common.sh zabbix_agent/run.sh zabbix_agent2/run.sh tests/smoke.sh
+          sh -n runtime/agent-common.sh
+          sh -n tests/smoke.sh
+      - name: Test metadata, options and template preprocessing
+        run: |
+          python3 tests/validate.py
+          python3 templates/home_assistant/test_templates.py
+      - name: Validate with the official Supervisor schema
+        run: |
+          docker run --rm --network none --read-only \
+            -e PYTHONDONTWRITEBYTECODE=1 \
+            -v "$PWD:/project:ro" --entrypoint python3 \
+            ghcr.io/home-assistant/amd64-hassio-supervisor:latest \
+            /project/tests/supervisor_schema.py
   test:
+    needs: quality
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -18,16 +56,22 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Check shell syntax
-        run: |
-          sh -n "${{ matrix.app }}/run.sh"
-          sh -n tests/smoke.sh
-      - name: Validate metadata and input handling
-        run: |
-          python3 -m pip install PyYAML==6.0.3
-          python3 tests/validate.py
-          python3 templates/home_assistant/test_templates.py
       - name: Build latest stable Alpine image
-        run: docker build --pull --no-cache -t ha-zabbix-test "${{ matrix.app }}"
-      - name: Test startup and configuration
+        run: |
+          version=$(jq -r '.version' "${{ matrix.app }}/config.json")
+          docker build --pull --no-cache --build-arg BUILD_VERSION="$version" \
+            -t ha-zabbix-test "${{ matrix.app }}"
+      - name: Test startup, passive protocol, PSK and restart
         run: sh tests/smoke.sh "${{ matrix.app }}"
+  template-import:
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install template test dependencies
+        run: python3 -m pip install -r requirements-dev.txt
+      - name: Import and reimport with Zabbix 8.0
+        run: python3 tests/template_import.py

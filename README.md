@@ -1,74 +1,73 @@
 # Zabbix Agent and Zabbix Agent 2 for Home Assistant
 
-Repository: https://github.com/Kimax89/HA-Zabbix-Agent
+Monitor your Home Assistant host with Zabbix. Both apps use Zabbix's official latest stable Alpine images and support amd64/aarch64, active and passive checks, and optional TLS-PSK encryption.
+
+[![Add repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FKimax89%2FHA-Zabbix-Agent)
+
+| App | Default passive port | Docker monitoring | Setup |
+| --- | --- | --- | --- |
+| ![Agent icon](zabbix_agent/icon.png) **Zabbix Agent** | 10052 | No | [Documentation](zabbix_agent/DOCS.md) |
+| ![Agent 2 icon](zabbix_agent2/icon.png) **Zabbix Agent 2** | 10050 | Yes | [Documentation](zabbix_agent2/DOCS.md) |
+
+App version: **1.0.0.2**. The app version is separate from the upstream Zabbix version. This is a community project, not an official Zabbix or Home Assistant app.
+
+## Install
+
+1. Use the button above, or add `https://github.com/Kimax89/HA-Zabbix-Agent` under **Settings → Apps → App store → Repositories**.
+2. Install the app you want. Supervisor builds it on your device from its Dockerfile.
+3. Configure your Zabbix host name and server/proxy address. Follow that app's Documentation tab for every option, PSK settings and Zabbix templates.
+4. Turn off Protection mode for host process monitoring; Agent 2 also needs it for the Docker socket.
+5. Start the app and check its log.
+
+Requires Supervisor, normally Home Assistant OS. Home Assistant Container alone cannot install apps. Older Home Assistant interfaces use the term Add-ons. For development, copy an entire app folder to `/addons/<app-folder>` and reload the app store.
+
+## Access and limitations
+
+Host network/PID/UTS access is needed to see host interfaces, processes and hostname. Both apps run as root and retain Docker's default AppArmor profile. Agent 2's Docker socket gives extensive host access even when mounted read-only, which explains its low security rating. No extra hardware access or Core/Supervisor API roles are requested.
+
+The host root filesystem is not generally mounted. Filesystem, OS/package and some cgroup values can describe the app container; compare them with the host and adjust your Zabbix template filters. Remote commands and custom UserParameters are not enabled. Neither app has a web interface.
 
 ## Optional extra: Home Assistant API template
 
-The standalone Zabbix 8.0 template **Home Assistant entities by HTTP** is available in [templates/home_assistant](templates/home_assistant/README.md). It monitors the Home Assistant API and entities without an agent or parent templates. See that folder for import instructions, configuration, and validation limits.
+[Home Assistant entities by HTTP](templates/home_assistant/README.md) is an independent **Zabbix 8.0** template for entity states, numeric readings, availability, battery levels and exposed update entities. It uses a Home Assistant token and does not require either app.
 
-[Download the template YAML](https://raw.githubusercontent.com/Kimax89/HA-Zabbix-Agent/main/templates/home_assistant/home_assistant_entities.yaml) and import it into Zabbix. This is an optional extra: installing either agent app does not install the template, and using the template does not require either app.
+[Download the YAML](https://raw.githubusercontent.com/Kimax89/HA-Zabbix-Agent/main/templates/home_assistant/home_assistant_entities.yaml), then follow its import/setup instructions. Entity monitoring polls current states; it does not capture every event, all recorder history, backups or Supervisor diagnostics.
 
-Two separate Home Assistant apps, app version **1.0.0.1**:
+## Updates and backups
 
-| App | Official base image | Default passive check port | Docker plugin |
-| --- | --- | --- | --- |
-| Zabbix Agent | `zabbix/zabbix-agent:alpine-latest` | 10052 | No |
-| Zabbix Agent 2 | `zabbix/zabbix-agent2:alpine-latest` | 10050 | Yes |
+The maintainer chose official `alpine-latest` images so a new build can use the latest stable Alpine release. Floating tags are not reproducible: check `agent.version` after upgrading and verify compatibility with your server/templates. **Restart** does not update the image; **Rebuild** fetches a newer upstream build. A published app-version change also gives Home Assistant an update indication.
 
-Both use the latest stable Alpine variant rather than `alpine-trunk`. The actual Zabbix version depends on the image published by Zabbix at build time. Docker Hub descriptions were not mutually consistent when checked on November 10, 2026, so this project does not claim a specific patch version for both images. Check the agent startup log or `agent.version` for the installed version.
+Saved options, including PSK secrets, are part of Home Assistant backups. Generated `/data/runtime` files are excluded and recreated on startup. Restore the saved options and restart the app; runtime sockets/PID files do not need restoring.
 
-## Install from GitHub
+## Development and verification
 
-1. Upload `repository.yaml`, both app folders, and the remaining project files to the root of the public repository. Upload the extracted files, not the ZIP archive. Include `.github`, which contains automated build tests.
-2. In Home Assistant, open **Settings → Apps → App store → ⋮ → Repositories**. Older interfaces use the term Add-ons.
-3. Add `https://github.com/Kimax89/HA-Zabbix-Agent` and install the app you want. Home Assistant builds it locally and needs access to Docker images and Alpine packages.
-4. Turn off **Protection mode** to access host processes. Agent 2 also requires this for the Docker socket.
-5. Configure and start the app. Check its log.
+Install Python 3.12+, Node.js, jq, ShellCheck and Docker. From the repository root:
 
-Supervisor and the app store are required, normally through Home Assistant OS. Home Assistant Container alone does not support app installation. For local installation, copy the folders to `/addons/zabbix_agent` and `/addons/zabbix_agent2` instead.
-
-## Configuration
-
-Example for Agent 2:
-
-```yaml
-hostname: homeassistant
-server_active: "192.168.1.20:10051"
-server_passive: ""
-listen_port: 10050
-tls_psk_identity: ""
-tls_psk: ""
+```text
+python -m pip install -r requirements-dev.txt
+python scripts/sync_runtime.py --check
+ruff check .
+ruff format --check .
+python tests/validate.py
+python templates/home_assistant/test_templates.py
 ```
 
-Replace the server address. The classic Agent defaults to `hostname: homeassistant-agent` and `listen_port: 10052`. If both apps run at the same time, use different Zabbix hostnames and passive listening ports.
+Edit the shared runtime in `runtime/agent-common.sh`, then run `python scripts/sync_runtime.py` to update both independent build contexts. See [runtime maintenance](runtime/README.md).
 
-- `hostname`: must exactly match the hostname in Zabbix, including letter case.
-- `server_active`: server/proxy address with an optional port, normally 10051. Leave empty to disable active checks.
-- `server_passive`: allowed server/proxy addresses or networks, separated by commas and without ports. Leave empty to disable passive checks.
-- `listen_port`: the host TCP port for passive checks. It must be available and match the agent interface configured on the Zabbix host. Ignored when passive checks are disabled.
-- `tls_psk_identity` and `tls_psk`: fill in both to enable encryption. The key must contain 32-512 hexadecimal characters and have an even length. Configure the same key, identity, and PSK connection types in Zabbix. When PSK is enabled, only PSK connections are allowed. The key is included in app configuration and backups. Without PSK, traffic is unencrypted; use a trusted network or VPN.
+For container checks on Linux:
 
-At least one server field must be filled in. Link a Linux template using the selected check type. Agent 2 can also use the Zabbix Docker template; passive Docker items require passive checks. Match templates to your server and agent versions.
+```text
+docker build --pull --no-cache -t ha-zabbix-test zabbix_agent
+sh tests/smoke.sh zabbix_agent
+docker build --pull --no-cache -t ha-zabbix-test zabbix_agent2
+sh tests/smoke.sh zabbix_agent2
+python tests/template_import.py
+```
 
-## Access and measurement limitations
+CI checks Python/shell quality, generated copies, app metadata/translations using the official Supervisor schema, both architectures, real passive/PSK requests, negative configurations and restart/file permissions. A separate disposable Zabbix stack checks API-template import and reimport. CI does not replace a real Home Assistant OS installation/restore test. See [validation evidence](VALIDATION.md) and the [guideline/Clean Code review](REVIEW.md).
 
-Both apps share the host PID, network, and hostname namespaces and run as root. They can see host processes and network interfaces. Compare CPU and memory measurements against the host because cgroups may affect some values.
+## Support and license
 
-Only Agent 2 receives access to the Docker socket and its built-in Docker plugin for container discovery, status, and statistics. The Docker socket provides extensive access to the host, even when mounted read-only. The classic Agent does not include Agent 2's Docker plugin.
+[Report an issue](https://github.com/Kimax89/HA-Zabbix-Agent/issues) with app/upstream versions, architecture and relevant logs. Remove PSK keys and API tokens before sharing configuration or logs. Maintainer: Klaus Kirkeby <kimax@wattup.eu>.
 
-The host root filesystem and SMART devices are not generally mounted. Filesystem, OS, and package information may describe the app container. Review Linux template discovery and unsupported items. Remote commands and custom UserParameters are not enabled. Neither app has a web interface or uses a Home Assistant API token.
-
-## Updates and testing
-
-`alpine-latest` is fetched during a new build. Restarting does not update the agent. Select **Rebuild** to fetch a newer upstream image, then verify the installed version in the log. For builds outside Home Assistant, use `docker build --pull --no-cache`. New app versions in the repository produce an update notification in Home Assistant; upstream image changes alone do not.
-
-The GitHub Actions workflow is configured to build both apps on amd64 and arm64 and run `tests/smoke.sh`. The tests check active/passive startup, actual passive listening ports, custom ports, PSK configuration, and the expected rejection messages for invalid configuration. It does not replace Home Assistant integration testing. For local metadata and input-validation checks, install Python 3, PyYAML and jq, then run `python3 tests/validate.py`. See `VALIDATION.md` for checks actually performed. Both apps use Home Assistant's stable release stage. The stage change does not by itself verify runtime compatibility; consult the validation report and CI results.
-
-## Sources
-
-- https://github.com/zabbix/zabbix-docker
-- https://hub.docker.com/r/zabbix/zabbix-agent/
-- https://hub.docker.com/r/zabbix/zabbix-agent2/
-- https://developers.home-assistant.io/docs/apps/configuration/
-
-Zabbix 7.0 and later use AGPL-3.0. Preserve upstream license notices when distributing. The source and release metadata are maintained in this repository.
+Repository code uses [GNU GPL v3](LICENSE). Official Zabbix binaries retain their upstream AGPL v3 license; other image packages retain their own licenses. Zabbix trademarks belong to Zabbix SIA. See [icon source/attribution](assets/icons/README.md).
