@@ -22,7 +22,18 @@ The updated workflow is configured to run:
 4. Active-only startup without a listener; passive requests and custom ports; correct PSK requests; rejection of incorrect PSK and unencrypted requests; private runtime/config/key modes; repair of older file modes after restart; expected validation failures before runtime files are created; graceful stop.
 5. Import and reimport of the API template through a disposable Zabbix 8.0 API, checking actual items, discovery rules and prototypes.
 
-Execution results for this candidate will be recorded after the workflow completes. Earlier version 1.0.0.1 passed all four image/runtime jobs in [run 44419270736](https://github.com/Kimax89/HA-Zabbix-Agent/actions/runs/44419270736). The earlier Agent 2 false negatives were traced to IPv4-only socket inspection and fixed; the current tests inspect both IPv4 and IPv6.
+**All six jobs passed** in [run 44428437409](https://github.com/Kimax89/HA-Zabbix-Agent/actions/runs/44428437409), testing commit `db9d98c4065e218e009dc01e4f2665126b0ec70f`:
+
+| Job | Result |
+| --- | --- |
+| Quality, local checks and official Supervisor schema | Passed; both app configurations and English labels accepted |
+| Zabbix Agent, amd64 | Passed |
+| Zabbix Agent, arm64 | Passed |
+| Zabbix Agent 2, amd64 | Passed |
+| Zabbix Agent 2, arm64 | Passed |
+| API-template import/reimport | Passed with Zabbix API 8.0.0; 11 items, 4 discovery rules and 7 item prototypes verified |
+
+The runtime jobs executed all protocol, PSK rejection, permission, restart and failure checks described above. The earlier Agent 2 false negatives were traced to IPv4-only socket inspection and fixed; the current tests inspect both IPv4 and IPv6. Documentation-only changes do not rerun the container matrix.
 
 ## Real-installation checks still required
 

@@ -1,6 +1,6 @@
 # Template validation
 
-Version **1.0.0.0**, November 10, 2026. Target format: Zabbix **8.0**.
+Template version **1.0.0.0**, reviewed November 19, 2026. Target format: Zabbix **8.0**. The generator refactor preserves the exported template's UUIDs, keys and contents.
 
 ## Passed locally
 
@@ -20,9 +20,14 @@ Version **1.0.0.0**, November 10, 2026. Target format: Zabbix **8.0**.
 
 Tools: Python 3.12, PyYAML 6.0.3, Node.js 24.22.1. Node.js testing does not constitute testing inside Zabbix's JavaScript engine.
 
+## Passed in an isolated Zabbix installation
+
+- [GitHub run 44428437409](https://github.com/Kimax89/HA-Zabbix-Agent/actions/runs/44428437409) imported and reimported the export through Zabbix API **8.0.0** successfully.
+- Verified the actual imported template contains **11 items, 4 discovery rules and 7 item prototypes**, and that a second import does not duplicate the template.
+- `tests/template_import.py` creates its own disposable PostgreSQL/Zabbix stack and removes its containers and network afterwards. It does not use a production Zabbix or Home Assistant installation.
+
 ## Not yet tested
 
-- Import into a running Zabbix 8.0 server or validation by its full frontend/API import validator.
 - Zabbix-native JSONPath evaluation, trigger evaluation, discovery filtering, inheritance, or Duktape preprocessing.
 - Real Home Assistant authentication, permissions, polling, TLS, scale, or collected measurements.
 
@@ -34,4 +39,4 @@ Tools: Python 3.12, PyYAML 6.0.3, Node.js 24.22.1. Node.js testing does not cons
 4. Check include/exclude expressions and per-entity history volume. Verify permissions with the intended Home Assistant user.
 5. Configure notification actions and verify API monitoring recovers after Home Assistant restarts.
 
-The templates are prepared for import and local checks passed; live import and monitoring compatibility are not yet confirmed.
+Local checks and real Zabbix import/reimport passed. Monitoring with real Home Assistant data, permissions, alerts and certificates remains an installation-level acceptance test.
